@@ -13,6 +13,7 @@ const Index = () => {
   const [overall, setOverall] = useState<OverallKPIs | null>(null);
   const [agents, setAgents] = useState<AgentKPI[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [darkMode, setDarkMode] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -46,9 +47,16 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 flex flex-col gap-4" style={{ maxWidth: 1920, margin: '0 auto' }}>
+    <div
+      className="min-h-screen p-4 flex flex-col gap-4 transition-colors duration-500"
+      style={{
+        maxWidth: 1920,
+        margin: '0 auto',
+        background: darkMode ? '#000000' : undefined,
+      }}
+    >
       {/* Header */}
-      <DashboardHeader />
+      <DashboardHeader darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
 
       {/* KPIs Gauges */}
       <div className="grid grid-cols-4 gap-4">
