@@ -7,7 +7,6 @@ import AlertPanel from '@/components/AlertPanel';
 import FilterBar, { Filters, applyFilters, emptyFilters } from '@/components/FilterBar';
 import { fetchOverallKPIs, fetchAgentKPIs, calculateKPIsFromAgents, getStatusColor, OverallKPIs, AgentKPI } from '@/lib/csvParser';
 
-const PRODUCTIVITY_META = 15;
 const REFRESH_INTERVAL = 5 * 60 * 1000;
 
 const Index = () => {
@@ -58,6 +57,8 @@ const Index = () => {
     );
   }
 
+  const absentismoValue = overall.absentismoGeneral > 1 ? overall.absentismoGeneral : overall.absentismoGeneral * 100;
+
   return (
     <div
       className="min-h-screen p-4 flex flex-col gap-4 transition-colors duration-500"
@@ -79,35 +80,49 @@ const Index = () => {
           label="Adherencia Bruta"
           value={overall.adhBrutaGeneral}
           color={getStatusColor(overall.adhBrutaGeneral)}
+          unit="Porcentaje (%)"
+          meta={95}
+          metaLabel="≥ 95%"
         />
         <GaugeChart
           label="Adherencia Neta"
           value={overall.adhNetaGeneral}
           color={getStatusColor(overall.adhNetaGeneral)}
+          unit="Porcentaje (%)"
+          meta={97}
+          metaLabel="≥ 97%"
         />
         <GaugeChart
           label="Productividad"
           value={overall.productividadGeneral}
-          color={overall.productividadGeneral >= PRODUCTIVITY_META ? 'green' : 'red'}
-          meta={PRODUCTIVITY_META}
+          color={overall.productividadGeneral >= 85 ? 'green' : 'red'}
+          meta={85}
+          metaLabel="≥ 85%"
+          unit="Porcentaje (%)"
         />
         <GaugeChart
           label="Absentismo"
-          value={overall.absentismoGeneral > 1 ? overall.absentismoGeneral : overall.absentismoGeneral * 100}
-          color={getStatusColor(overall.absentismoGeneral > 1 ? overall.absentismoGeneral : overall.absentismoGeneral * 100, true)}
+          value={absentismoValue}
+          color={getStatusColor(absentismoValue, true)}
+          unit="Porcentaje (%)"
+          meta={0}
+          metaLabel="0%"
         />
         <GaugeChart
           label="Ventas Totales"
           value={overall.ventasTotales}
-          color={overall.ventasTotales > 0 ? 'green' : 'yellow'}
+          color={overall.ventasTotales >= 10 ? 'green' : overall.ventasTotales >= 5 ? 'yellow' : 'red'}
           suffix=""
+          unit="Número de ventas"
+          meta={10}
+          metaLabel="≥ 10 ventas"
         />
       </div>
 
       {/* Bottom Grid: Chart + Ranking + Alerts */}
       <div className="grid grid-cols-12 gap-4 flex-1">
         <div className="col-span-5">
-          <ProductivityChart currentValue={overall.productividadGeneral} meta={PRODUCTIVITY_META} />
+          <ProductivityChart currentValue={overall.productividadGeneral} meta={85} />
         </div>
         <div className="col-span-4">
           <AgentRanking agents={filteredAgents} />
