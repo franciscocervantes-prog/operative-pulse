@@ -6,6 +6,8 @@ interface GaugeChartProps {
   color: 'green' | 'yellow' | 'red';
   suffix?: string;
   meta?: number;
+  metaLabel?: string;
+  unit?: string;
 }
 
 const colorMap = {
@@ -20,7 +22,7 @@ const bgColorMap = {
   red: 'hsla(0, 72%, 51%, 0.12)',
 };
 
-export default function GaugeChart({ label, value, color, suffix = '%', meta }: GaugeChartProps) {
+export default function GaugeChart({ label, value, color, suffix = '%', meta, metaLabel, unit }: GaugeChartProps) {
   const [animatedValue, setAnimatedValue] = useState(0);
   
   useEffect(() => {
@@ -71,11 +73,14 @@ export default function GaugeChart({ label, value, color, suffix = '%', meta }: 
         </div>
       </div>
       <span className="kpi-label text-center">{label}</span>
+      {unit && (
+        <span className="text-[10px] text-muted-foreground -mt-1">{unit}</span>
+      )}
       {meta !== undefined && (
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-muted-foreground">Meta: {meta}%</span>
+        <div className="flex items-center gap-1 text-xs mt-1">
+          <span className="text-muted-foreground">Meta: {metaLabel || `${meta}%`}</span>
           <span className={`font-semibold ${value >= meta ? 'status-green' : 'status-red'}`}>
-            {value >= meta ? '▲' : '▼'} {Math.abs(value - meta).toFixed(1)}%
+            {value >= meta ? '✓' : '✗'} {value >= meta ? 'Cumple' : 'Fuera'}
           </span>
         </div>
       )}

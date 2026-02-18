@@ -16,14 +16,14 @@ export default function AgentRanking({ agents }: AgentRankingProps) {
   return (
     <div className="dashboard-card h-full">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-        Ranking de Agentes
+        Ranking de Agentes – Desempeño Volumétrico
       </h3>
       <div className="grid grid-cols-2 gap-6">
         {/* Top 5 */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-success inline-block" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-success">Top 5</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-success">Top 5 – Mayor Productividad</span>
           </div>
           <div className="space-y-2">
             {top5.map((agent, i) => (
@@ -50,7 +50,7 @@ export default function AgentRanking({ agents }: AgentRankingProps) {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-danger inline-block" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-danger">Bottom 5</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-danger">Bajo Rendimiento</span>
           </div>
           <div className="space-y-2">
             {bottom5.map((agent, i) => (
