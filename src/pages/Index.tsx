@@ -1,19 +1,21 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import GaugeChart from '@/components/GaugeChart';
 import ProductivityChart from '@/components/ProductivityChart';
 import AgentRanking from '@/components/AgentRanking';
 import AlertPanel from '@/components/AlertPanel';
-import { fetchOverallKPIs, fetchAgentKPIs, getStatusColor, OverallKPIs, AgentKPI } from '@/lib/csvParser';
+import FilterBar, { Filters, applyFilters, emptyFilters } from '@/components/FilterBar';
+import { fetchOverallKPIs, fetchAgentKPIs, calculateKPIsFromAgents, getStatusColor, OverallKPIs, AgentKPI } from '@/lib/csvParser';
 
-const PRODUCTIVITY_META = 15; // Configurable productivity target
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const PRODUCTIVITY_META = 15;
+const REFRESH_INTERVAL = 5 * 60 * 1000;
 
 const Index = () => {
-  const [overall, setOverall] = useState<OverallKPIs | null>(null);
+  const [overallRaw, setOverallRaw] = useState<OverallKPIs | null>(null);
   const [agents, setAgents] = useState<AgentKPI[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [darkMode, setDarkMode] = useState(false);
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
 
   const loadData = useCallback(async () => {
     try {
@@ -21,7 +23,7 @@ const Index = () => {
         fetchOverallKPIs(),
         fetchAgentKPIs(),
       ]);
-      setOverall(overallData);
+      setOverallRaw(overallData);
       setAgents(agentData);
       setLastUpdate(new Date());
     } catch (error) {
@@ -34,6 +36,16 @@ const Index = () => {
     const interval = setInterval(loadData, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  const hasActiveFilter = Object.values(filters).some(v => v !== '');
+  const filteredAgents = useMemo(() => applyFilters(agents, filters), [agents, filters]);
+
+  // Recalculate KPIs from filtered agents when filters are active; otherwise use raw overall
+  const overall = useMemo(() => {
+    if (!overallRaw) return null;
+    if (!hasActiveFilter) return overallRaw;
+    return calculateKPIsFromAgents(filteredAgents);
+  }, [overallRaw, hasActiveFilter, filteredAgents]);
 
   if (!overall) {
     return (
@@ -58,8 +70,11 @@ const Index = () => {
       {/* Header */}
       <DashboardHeader darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
 
+      {/* Filters */}
+      <FilterBar agents={agents} filters={filters} onFiltersChange={setFilters} />
+
       {/* KPIs Gauges */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <GaugeChart
           label="Adherencia Bruta"
           value={overall.adhBrutaGeneral}
@@ -81,6 +96,12 @@ const Index = () => {
           value={overall.absentismoGeneral * 100}
           color={getStatusColor(overall.absentismoGeneral * 100, true)}
         />
+        <GaugeChart
+          label="Ventas Totales"
+          value={overall.ventasTotales}
+          color={overall.ventasTotales > 0 ? 'green' : 'yellow'}
+          suffix=""
+        />
       </div>
 
       {/* Bottom Grid: Chart + Ranking + Alerts */}
@@ -89,16 +110,19 @@ const Index = () => {
           <ProductivityChart currentValue={overall.productividadGeneral} meta={PRODUCTIVITY_META} />
         </div>
         <div className="col-span-4">
-          <AgentRanking agents={agents} />
+          <AgentRanking agents={filteredAgents} />
         </div>
         <div className="col-span-3">
-          <AlertPanel agents={agents} />
+          <AlertPanel agents={filteredAgents} />
         </div>
       </div>
 
       {/* Footer */}
       <div className="flex justify-between text-[10px] text-muted-foreground px-2">
-        <span>Actualización automática cada 5 min</span>
+        <span>
+          Actualización automática cada 5 min
+          {hasActiveFilter && <span className="ml-2 text-accent font-semibold">• Filtro activo ({filteredAgents.length} agentes)</span>}
+        </span>
         <span>Última actualización: {lastUpdate.toLocaleTimeString('es-MX')}</span>
       </div>
     </div>
