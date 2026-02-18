@@ -93,8 +93,8 @@ const Index = () => {
         />
         <GaugeChart
           label="Absentismo"
-          value={overall.absentismoGeneral * 100}
-          color={getStatusColor(overall.absentismoGeneral * 100, true)}
+          value={overall.absentismoGeneral > 1 ? overall.absentismoGeneral : overall.absentismoGeneral * 100}
+          color={getStatusColor(overall.absentismoGeneral > 1 ? overall.absentismoGeneral : overall.absentismoGeneral * 100, true)}
         />
         <GaugeChart
           label="Ventas Totales"
