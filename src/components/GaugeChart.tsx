@@ -13,6 +13,7 @@ interface GaugeChartProps {
   rangeMin?: number;
   rangeMax?: number;
   rangeLabel?: string; // label shown instead of ✓/✗
+  lowerIsBetter?: boolean; // invert meta comparison (e.g. absentismo)
 }
 
 const colorMap = {
@@ -33,7 +34,7 @@ function getRangeStatus(value: number, min: number, max: number): { label: strin
   return { label: '🔴 Sobresaturado', colorClass: 'status-red' };
 }
 
-export default function GaugeChart({ label, value, color, suffix = '%', meta, metaLabel, unit, rangeMode, rangeMin = 55, rangeMax = 72 }: GaugeChartProps) {
+export default function GaugeChart({ label, value, color, suffix = '%', meta, metaLabel, unit, rangeMode, rangeMin = 55, rangeMax = 72, lowerIsBetter = false }: GaugeChartProps) {
   const [animatedValue, setAnimatedValue] = useState(0);
   
   useEffect(() => {
@@ -98,8 +99,8 @@ export default function GaugeChart({ label, value, color, suffix = '%', meta, me
       {!rangeMode && meta !== undefined && (
         <div className="flex items-center gap-1 text-xs mt-1">
           <span className="text-muted-foreground">Meta: {metaLabel || `${meta}%`}</span>
-          <span className={`font-semibold ${value >= meta ? 'status-green' : 'status-red'}`}>
-            {value >= meta ? '✓' : '✗'} {value >= meta ? 'Cumple' : 'Fuera'}
+          <span className={`font-semibold ${(lowerIsBetter ? value <= meta : value >= meta) ? 'status-green' : 'status-red'}`}>
+            {(lowerIsBetter ? value <= meta : value >= meta) ? '✓ Cumple' : '✗ Fuera'}
           </span>
         </div>
       )}
