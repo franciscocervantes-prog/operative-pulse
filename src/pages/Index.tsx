@@ -110,10 +110,11 @@ const Index = () => {
         <GaugeChart
           label="Absentismo"
           value={absentismoValue}
-          color={getStatusColor(absentismoValue, true)}
+          color={absentismoValue <= 8 ? 'green' : 'red'}
           unit="Porcentaje (%)"
-          meta={0}
-          metaLabel="0%"
+          meta={8}
+          metaLabel="≤ 8%"
+          lowerIsBetter
         />
         <GaugeChart
           label="Ventas Totales"
