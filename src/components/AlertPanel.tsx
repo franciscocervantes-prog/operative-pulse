@@ -12,6 +12,8 @@ interface AlertPanelProps {
   agents: AgentKPI[];
 }
 
+const ABSENTISMO_LIMIT = 8; // %
+
 function generateAlerts(agents: AgentKPI[]): Alert[] {
   const alerts: Alert[] = [];
 
@@ -31,12 +33,16 @@ function generateAlerts(agents: AgentKPI[]): Alert[] {
     if (agent.bajaProductividad > 0.8) {
       alerts.push({ agente: agent.agente, kpi: 'Baja Productividad', valor: agent.bajaProductividad, nivel: 'critical' });
     }
+    // Absentismo > 8% → alerta crítica
+    if (agent.absentismo > ABSENTISMO_LIMIT) {
+      alerts.push({ agente: agent.agente, kpi: 'Absentismo', valor: agent.absentismo, nivel: 'critical' });
+    }
   });
 
   // Sort by criticality, then limit
   return alerts
     .sort((a, b) => (a.nivel === 'critical' ? -1 : 1) - (b.nivel === 'critical' ? -1 : 1))
-    .slice(0, 12);
+    .slice(0, 20);
 }
 
 export default function AlertPanel({ agents }: AlertPanelProps) {
