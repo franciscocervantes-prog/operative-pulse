@@ -5,66 +5,78 @@ interface AgentRankingProps {
 }
 
 export default function AgentRanking({ agents }: AgentRankingProps) {
-  const sorted = [...agents]
-    .filter(a => a.desempenoVolumetrico > 0 || a.adherenciaBruta > 0)
-    .sort((a, b) => b.desempenoVolumetrico - a.desempenoVolumetrico);
+  // Sort by absentismo descending (highest absentism = worst impact)
+  const withAbsentismo = [...agents].filter(a => a.adherenciaBruta > 0 || a.absentismo > 0);
+  const sorted = [...withAbsentismo].sort((a, b) => b.absentismo - a.absentismo);
 
-  const top5 = sorted.slice(0, 5);
-  const bottom5 = sorted.filter(a => a.desempenoVolumetrico > 0).slice(-5).reverse();
-  const maxValue = top5[0]?.desempenoVolumetrico || 100;
+  const top5Worst = sorted.slice(0, 5);   // Mayor absentismo (peor)
+  const top5Best = [...withAbsentismo]
+    .sort((a, b) => a.absentismo - b.absentismo)
+    .slice(0, 5);                          // Menor absentismo (mejor)
+
+  const maxValue = top5Worst[0]?.absentismo || 100;
+  const LIMIT = 8; // % límite
 
   return (
     <div className="dashboard-card h-full">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-        Ranking de Agentes – Desempeño Volumétrico
+        Ranking de Agentes – Absentismo
       </h3>
       <div className="grid grid-cols-2 gap-6">
-        {/* Top 5 */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-success inline-block" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-success">Top 5 – Mayor Productividad</span>
-          </div>
-          <div className="space-y-2">
-            {top5.map((agent, i) => (
-              <div key={agent.agente} className="animate-fade-in-up" style={{ animationDelay: `${i * 100}ms` }}>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-foreground font-medium truncate max-w-[140px]">{agent.agente}</span>
-                  <span className="font-mono text-success font-semibold">{agent.desempenoVolumetrico.toFixed(1)}</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{
-                      width: `${(agent.desempenoVolumetrico / maxValue) * 100}%`,
-                      background: 'linear-gradient(90deg, hsl(142, 71%, 35%), hsl(142, 71%, 50%))',
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom 5 */}
+        {/* Mayor Absentismo */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-danger inline-block" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-danger">Bajo Rendimiento</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-danger">Mayor Impacto</span>
           </div>
           <div className="space-y-2">
-            {bottom5.map((agent, i) => (
+            {top5Worst.map((agent, i) => {
+              const overLimit = agent.absentismo > LIMIT;
+              return (
+                <div key={agent.agente} className="animate-fade-in-up" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-foreground font-medium truncate max-w-[130px]">{agent.agente}</span>
+                    <span className={`font-mono font-semibold ${overLimit ? 'text-danger' : 'text-warning'}`}>
+                      {agent.absentismo.toFixed(1)}%
+                      {overLimit && ' 🚨'}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{
+                        width: `${Math.max((agent.absentismo / Math.max(maxValue, LIMIT)) * 100, 5)}%`,
+                        background: overLimit
+                          ? 'linear-gradient(90deg, hsl(0, 72%, 40%), hsl(0, 72%, 55%))'
+                          : 'linear-gradient(90deg, hsl(45, 93%, 45%), hsl(45, 93%, 58%))',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Menor Absentismo */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full bg-success inline-block" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-success">Dentro de Parámetro</span>
+          </div>
+          <div className="space-y-2">
+            {top5Best.map((agent, i) => (
               <div key={agent.agente} className="animate-fade-in-up" style={{ animationDelay: `${i * 100}ms` }}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-foreground font-medium truncate max-w-[140px]">{agent.agente}</span>
-                  <span className="font-mono text-danger font-semibold">{agent.desempenoVolumetrico.toFixed(1)}</span>
+                  <span className="text-foreground font-medium truncate max-w-[130px]">{agent.agente}</span>
+                  <span className="font-mono text-success font-semibold">{agent.absentismo.toFixed(1)}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-1000 ease-out"
                     style={{
-                      width: `${Math.max((agent.desempenoVolumetrico / maxValue) * 100, 5)}%`,
-                      background: 'linear-gradient(90deg, hsl(0, 72%, 40%), hsl(0, 72%, 55%))',
+                      width: `${Math.max((agent.absentismo / Math.max(maxValue, LIMIT)) * 100, 3)}%`,
+                      background: 'linear-gradient(90deg, hsl(142, 71%, 35%), hsl(142, 71%, 50%))',
                     }}
                   />
                 </div>

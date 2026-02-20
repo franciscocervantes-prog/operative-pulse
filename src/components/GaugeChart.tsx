@@ -8,6 +8,11 @@ interface GaugeChartProps {
   meta?: number;
   metaLabel?: string;
   unit?: string;
+  // Range-based evaluation (overrides meta-based)
+  rangeMode?: boolean;
+  rangeMin?: number;
+  rangeMax?: number;
+  rangeLabel?: string; // label shown instead of ✓/✗
 }
 
 const colorMap = {
@@ -22,7 +27,13 @@ const bgColorMap = {
   red: 'hsla(0, 72%, 51%, 0.12)',
 };
 
-export default function GaugeChart({ label, value, color, suffix = '%', meta, metaLabel, unit }: GaugeChartProps) {
+function getRangeStatus(value: number, min: number, max: number): { label: string; colorClass: string } {
+  if (value >= min && value <= max) return { label: '✓ Óptimo', colorClass: 'status-green' };
+  if (value < min) return { label: '⚠ Falta recurso', colorClass: 'status-yellow' };
+  return { label: '🔴 Sobresaturado', colorClass: 'status-red' };
+}
+
+export default function GaugeChart({ label, value, color, suffix = '%', meta, metaLabel, unit, rangeMode, rangeMin = 55, rangeMax = 72 }: GaugeChartProps) {
   const [animatedValue, setAnimatedValue] = useState(0);
   
   useEffect(() => {
@@ -35,6 +46,8 @@ export default function GaugeChart({ label, value, color, suffix = '%', meta, me
   const clampedValue = Math.min(Math.max(animatedValue, 0), 100);
   const offset = circumference - (clampedValue / 100) * circumference;
   const strokeColor = colorMap[color];
+
+  const rangeStatus = rangeMode ? getRangeStatus(value, rangeMin, rangeMax) : null;
 
   return (
     <div className="dashboard-card flex flex-col items-center justify-center gap-2 min-h-[200px]">
@@ -76,7 +89,13 @@ export default function GaugeChart({ label, value, color, suffix = '%', meta, me
       {unit && (
         <span className="text-[10px] text-muted-foreground -mt-1">{unit}</span>
       )}
-      {meta !== undefined && (
+      {rangeMode && rangeStatus && (
+        <div className="flex flex-col items-center gap-0.5 mt-1">
+          <span className="text-[10px] text-muted-foreground">Rango óptimo: {rangeMin}% – {rangeMax}%</span>
+          <span className={`text-xs font-semibold ${rangeStatus.colorClass}`}>{rangeStatus.label}</span>
+        </div>
+      )}
+      {!rangeMode && meta !== undefined && (
         <div className="flex items-center gap-1 text-xs mt-1">
           <span className="text-muted-foreground">Meta: {metaLabel || `${meta}%`}</span>
           <span className={`font-semibold ${value >= meta ? 'status-green' : 'status-red'}`}>

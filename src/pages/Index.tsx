@@ -95,10 +95,17 @@ const Index = () => {
         <GaugeChart
           label="Productividad"
           value={overall.productividadGeneral}
-          color={overall.productividadGeneral >= 85 ? 'green' : 'red'}
-          meta={85}
-          metaLabel="≥ 85%"
+          color={
+            overall.productividadGeneral >= 55 && overall.productividadGeneral <= 72
+              ? 'green'
+              : overall.productividadGeneral < 55
+              ? 'yellow'
+              : 'red'
+          }
           unit="Porcentaje (%)"
+          rangeMode
+          rangeMin={55}
+          rangeMax={72}
         />
         <GaugeChart
           label="Absentismo"
