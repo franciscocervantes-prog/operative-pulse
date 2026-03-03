@@ -52,6 +52,21 @@ const Index = () => {
   const hasActiveFilter = Object.values(filters).some(v => v !== '');
   const filteredAgents = useMemo(() => applyFilters(allAgents, filters), [allAgents, filters]);
 
+  // Filter daily records by hierarchy too (for SalesChart)
+  const filteredRecords = useMemo(() => {
+    if (!filters.supervisor && !filters.area && !filters.gerente && !filters.coordinador && !filters.agente) {
+      return dateFilteredRecords;
+    }
+    return dateFilteredRecords.filter(r => {
+      if (filters.supervisor && r.supervisor !== filters.supervisor) return false;
+      if (filters.area && r.area !== filters.area) return false;
+      if (filters.gerente && r.gerente !== filters.gerente) return false;
+      if (filters.coordinador && r.coordinador !== filters.coordinador) return false;
+      if (filters.agente && r.agente !== filters.agente) return false;
+      return true;
+    });
+  }, [dateFilteredRecords, filters]);
+
   // Recalculate overall KPIs
   const overall = useMemo(() => {
     if (!overallRaw && filteredAgents.length === 0) return null;
@@ -146,7 +161,7 @@ const Index = () => {
       {/* Bottom Grid: Sales + Ranking + Alerts */}
       <div className="grid grid-cols-12 gap-4 flex-1">
         <div className="col-span-5">
-          <SalesChart records={dateFilteredRecords} />
+          <SalesChart records={filteredRecords} />
         </div>
         <div className="col-span-4">
           <AgentRanking agents={filteredAgents} />
