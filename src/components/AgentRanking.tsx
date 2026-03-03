@@ -5,17 +5,16 @@ interface AgentRankingProps {
 }
 
 export default function AgentRanking({ agents }: AgentRankingProps) {
-  // Sort by absentismo descending (highest absentism = worst impact)
-  const withAbsentismo = [...agents].filter(a => a.adherenciaBruta > 0 || a.absentismo > 0);
-  const sorted = [...withAbsentismo].sort((a, b) => b.absentismo - a.absentismo);
+  const withData = [...agents].filter(a => a.adherenciaBruta > 0 || a.absentismo > 0);
+  const sorted = [...withData].sort((a, b) => b.absentismo - a.absentismo);
 
-  const top5Worst = sorted.slice(0, 5);   // Mayor absentismo (peor)
-  const top5Best = [...withAbsentismo]
+  const top5Worst = sorted.slice(0, 5);
+  const top5Best = [...withData]
     .sort((a, b) => a.absentismo - b.absentismo)
-    .slice(0, 5);                          // Menor absentismo (mejor)
+    .slice(0, 5);
 
   const maxValue = top5Worst[0]?.absentismo || 100;
-  const LIMIT = 8; // % límite
+  const LIMIT = 10; // %
 
   return (
     <div className="dashboard-card h-full">

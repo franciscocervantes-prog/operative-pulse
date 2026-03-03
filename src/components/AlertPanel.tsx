@@ -12,37 +12,31 @@ interface AlertPanelProps {
   agents: AgentKPI[];
 }
 
-const ABSENTISMO_LIMIT = 8; // %
+const ABSENTISMO_LIMIT = 10; // %
 
 function generateAlerts(agents: AgentKPI[]): Alert[] {
   const alerts: Alert[] = [];
 
   agents.forEach(agent => {
+    // KPI total < 100 → warning
+    if (agent.kpiTotal < 100) {
+      alerts.push({ agente: agent.agente, kpi: 'KPI Total', valor: agent.kpiTotal, nivel: agent.kpiTotal < 50 ? 'critical' : 'warning' });
+    }
+    // Absentismo > 10%
+    if (agent.absentismo > ABSENTISMO_LIMIT) {
+      alerts.push({ agente: agent.agente, kpi: 'Absentismo', valor: agent.absentismo, nivel: 'critical' });
+    }
     if (agent.adherenciaBruta > 0 && agent.adherenciaBruta < 80) {
       alerts.push({ agente: agent.agente, kpi: 'Adherencia Bruta', valor: agent.adherenciaBruta, nivel: 'critical' });
     }
     if (agent.adherenciaNeta > 0 && agent.adherenciaNeta < 75) {
       alerts.push({ agente: agent.agente, kpi: 'Adherencia Neta', valor: agent.adherenciaNeta, nivel: 'critical' });
     }
-    if (agent.excesoDePausa > 30) {
-      alerts.push({ agente: agent.agente, kpi: 'Exceso de Pausa', valor: agent.excesoDePausa, nivel: agent.excesoDePausa > 100 ? 'critical' : 'warning' });
-    }
-    if (agent.desempenoVolumetrico === 0 && agent.adherenciaBruta > 0) {
-      alerts.push({ agente: agent.agente, kpi: 'Desempeño Volumétrico', valor: 0, nivel: 'warning' });
-    }
-    if (agent.bajaProductividad > 0.8) {
-      alerts.push({ agente: agent.agente, kpi: 'Baja Productividad', valor: agent.bajaProductividad, nivel: 'critical' });
-    }
-    // Absentismo > 8% → alerta crítica
-    if (agent.absentismo > ABSENTISMO_LIMIT) {
-      alerts.push({ agente: agent.agente, kpi: 'Absentismo', valor: agent.absentismo, nivel: 'critical' });
-    }
   });
 
-  // Sort by criticality, then limit
   return alerts
     .sort((a, b) => (a.nivel === 'critical' ? -1 : 1) - (b.nivel === 'critical' ? -1 : 1))
-    .slice(0, 20);
+    .slice(0, 30);
 }
 
 export default function AlertPanel({ agents }: AlertPanelProps) {
