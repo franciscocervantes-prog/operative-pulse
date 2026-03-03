@@ -1,29 +1,30 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import GaugeChart from '@/components/GaugeChart';
-import ProductivityChart from '@/components/ProductivityChart';
+import SalesChart from '@/components/SalesChart';
 import AgentRanking from '@/components/AgentRanking';
 import AlertPanel from '@/components/AlertPanel';
+import KPIBreakdown from '@/components/KPIBreakdown';
 import FilterBar, { Filters, applyFilters, emptyFilters } from '@/components/FilterBar';
-import { fetchOverallKPIs, fetchAgentKPIs, calculateKPIsFromAgents, getStatusColor, OverallKPIs, AgentKPI } from '@/lib/csvParser';
+import { fetchOverallKPIs, fetchDailyRecords, aggregateAgents, calculateKPIsFromAgents, getStatusColor, isDateInRange, OverallKPIs, DailyAgentRecord, AgentKPI } from '@/lib/csvParser';
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
 
 const Index = () => {
   const [overallRaw, setOverallRaw] = useState<OverallKPIs | null>(null);
-  const [agents, setAgents] = useState<AgentKPI[]>([]);
+  const [dailyRecords, setDailyRecords] = useState<DailyAgentRecord[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [darkMode, setDarkMode] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
 
   const loadData = useCallback(async () => {
     try {
-      const [overallData, agentData] = await Promise.all([
+      const [overallData, records] = await Promise.all([
         fetchOverallKPIs(),
-        fetchAgentKPIs(),
+        fetchDailyRecords(),
       ]);
       setOverallRaw(overallData);
-      setAgents(agentData);
+      setDailyRecords(records);
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Error loading data:', error);
@@ -36,15 +37,29 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  const hasActiveFilter = Object.values(filters).some(v => v !== '');
-  const filteredAgents = useMemo(() => applyFilters(agents, filters), [agents, filters]);
+  // Filter daily records by date range
+  const dateFilteredRecords = useMemo(() => {
+    if (!filters.dateFrom && !filters.dateTo) return dailyRecords;
+    const from = filters.dateFrom ? new Date(filters.dateFrom) : null;
+    const to = filters.dateTo ? new Date(filters.dateTo + 'T23:59:59') : null;
+    return dailyRecords.filter(r => isDateInRange(r.fecha, from, to));
+  }, [dailyRecords, filters.dateFrom, filters.dateTo]);
 
-  // Recalculate KPIs from filtered agents when filters are active; otherwise use raw overall
+  // Aggregate daily → agent KPIs
+  const allAgents = useMemo(() => aggregateAgents(dateFilteredRecords), [dateFilteredRecords]);
+
+  // Apply hierarchy filters
+  const hasActiveFilter = Object.values(filters).some(v => v !== '');
+  const filteredAgents = useMemo(() => applyFilters(allAgents, filters), [allAgents, filters]);
+
+  // Recalculate overall KPIs
   const overall = useMemo(() => {
-    if (!overallRaw) return null;
-    if (!hasActiveFilter) return overallRaw;
-    return calculateKPIsFromAgents(filteredAgents);
-  }, [overallRaw, hasActiveFilter, filteredAgents]);
+    if (!overallRaw && filteredAgents.length === 0) return null;
+    if (hasActiveFilter || filters.dateFrom || filters.dateTo) {
+      return calculateKPIsFromAgents(filteredAgents);
+    }
+    return overallRaw;
+  }, [overallRaw, hasActiveFilter, filteredAgents, filters.dateFrom, filters.dateTo]);
 
   if (!overall) {
     return (
@@ -68,11 +83,12 @@ const Index = () => {
         background: darkMode ? '#000000' : undefined,
       }}
     >
-      {/* Header */}
       <DashboardHeader darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
 
-      {/* Filters */}
-      <FilterBar agents={agents} filters={filters} onFiltersChange={setFilters} />
+      <FilterBar agents={allAgents} allRecords={dailyRecords} filters={filters} onFiltersChange={setFilters} />
+
+      {/* KPI Breakdown */}
+      <KPIBreakdown agents={filteredAgents} />
 
       {/* KPIs Gauges */}
       <div className="grid grid-cols-5 gap-4">
@@ -110,10 +126,10 @@ const Index = () => {
         <GaugeChart
           label="Absentismo"
           value={absentismoValue}
-          color={absentismoValue <= 8 ? 'green' : 'red'}
+          color={absentismoValue <= 10 ? 'green' : 'red'}
           unit="Porcentaje (%)"
-          meta={8}
-          metaLabel="≤ 8%"
+          meta={10}
+          metaLabel="≤ 10%"
           lowerIsBetter
         />
         <GaugeChart
@@ -127,10 +143,10 @@ const Index = () => {
         />
       </div>
 
-      {/* Bottom Grid: Chart + Ranking + Alerts */}
+      {/* Bottom Grid: Sales + Ranking + Alerts */}
       <div className="grid grid-cols-12 gap-4 flex-1">
         <div className="col-span-5">
-          <ProductivityChart currentValue={overall.productividadGeneral} meta={85} />
+          <SalesChart records={dateFilteredRecords} />
         </div>
         <div className="col-span-4">
           <AgentRanking agents={filteredAgents} />
@@ -140,7 +156,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex justify-between text-[10px] text-muted-foreground px-2">
         <span>
           Actualización automática cada 5 min
