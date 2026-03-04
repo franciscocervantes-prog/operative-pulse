@@ -7,23 +7,25 @@ interface KPIBreakdownProps {
 
 export default function KPIBreakdown({ agents }: KPIBreakdownProps) {
   const avgKPI = useMemo(() => {
-    if (agents.length === 0) return { total: 0, hig: 0, com: 0 };
+    if (agents.length === 0) return { total: 0, hig: 0, com: 0, primarias: 0 };
     const sum = agents.reduce(
       (acc, a) => ({
         total: acc.total + a.kpiTotal,
         hig: acc.hig + a.kpiHigienicos,
         com: acc.com + a.kpiComerciales,
+        primarias: acc.primarias + a.primariasTotal,
       }),
-      { total: 0, hig: 0, com: 0 }
+      { total: 0, hig: 0, com: 0, primarias: 0 }
     );
     const n = agents.length;
-    return { total: sum.total / n, hig: sum.hig / n, com: sum.com / n };
+    return { total: sum.total / n, hig: sum.hig / n, com: sum.com / n, primarias: sum.primarias / n };
   }, [agents]);
 
   const items = [
     { label: 'KPI Total', value: avgKPI.total, weight: '100%', color: 'hsl(var(--primary))' },
     { label: 'Higiénicos', value: avgKPI.hig, weight: '40%', color: 'hsl(var(--chart-line))' },
     { label: 'Comerciales', value: avgKPI.com, weight: '60%', color: 'hsl(var(--accent))' },
+    { label: 'Primarias', value: avgKPI.primarias, weight: '20% (Com)', color: 'hsl(var(--chart-5, 280 65% 60%))' },
   ];
 
   return (
@@ -31,7 +33,7 @@ export default function KPIBreakdown({ agents }: KPIBreakdownProps) {
       <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
         📊 Ponderación KPI
       </h3>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {items.map(item => (
           <div key={item.label} className="text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{item.label}</p>

@@ -4,6 +4,7 @@ export interface OverallKPIs {
   productividadGeneral: number;
   absentismoGeneral: number;
   ventasTotales: number;
+  primariasTotal: number;
 }
 
 export interface DailyAgentRecord {
@@ -18,6 +19,7 @@ export interface DailyAgentRecord {
   productividad: number;
   absentismo: number;
   ventasHoy: number;
+  primarias: number;
   novedad: string;
   novedadAjustada: string;
 }
@@ -34,10 +36,11 @@ export interface AgentKPI {
   productividad: number;
   absentismo: number;
   ventasTotales: number;
+  primariasTotal: number;
   diasTrabajados: number;
   // KPI ponderado
   kpiHigienicos: number;    // (ADH*0.10 + Prod*0.20 + Abs*0.10) 
-  kpiComerciales: number;   // (Primarias*0.20 + Ventas*0.40) – Primarias=0 placeholder
+  kpiComerciales: number;   // (Primarias*0.20 + Ventas*0.40)
   kpiTotal: number;         // Higiénicos*0.40 + Comerciales*0.60
 }
 
@@ -78,6 +81,7 @@ export async function fetchOverallKPIs(): Promise<OverallKPIs> {
     productividadGeneral: idx('productividad'),
     absentismoGeneral: idx('absentismo'),
     ventasTotales: idx('ventas'),
+    primariasTotal: idx('primarias'),
   };
 }
 
@@ -113,6 +117,7 @@ export async function fetchDailyRecords(): Promise<DailyAgentRecord[]> {
       productividad: num('productividad'),
       absentismo: num('absentismo'),
       ventasHoy: num('ventas'),
+      primarias: num('primarias'),
       novedad: str('novedad'),
       novedadAjustada: cols[cols.length - 1]?.trim() || '',
     };
@@ -146,6 +151,11 @@ function ventasScore(total: number): number {
   return Math.min((total / 10) * 100, 100);
 }
 
+function primariasScoreFn(total: number): number {
+  // Normalize: 5+ primarias = 100 (placeholder threshold, adjust when real data arrives)
+  return Math.min((total / 5) * 100, 100);
+}
+
 export function aggregateAgents(records: DailyAgentRecord[]): AgentKPI[] {
   const byAgent = new Map<string, DailyAgentRecord[]>();
   records.forEach(r => {
@@ -164,6 +174,7 @@ export function aggregateAgents(records: DailyAgentRecord[]): AgentKPI[] {
     const avgProd = workDays.reduce((s, r) => s + r.productividad, 0) / count;
     const avgAbs = recs.reduce((s, r) => s + r.absentismo, 0) / recs.length; // all days
     const totalVentas = recs.reduce((s, r) => s + r.ventasHoy, 0);
+    const totalPrimarias = recs.reduce((s, r) => s + r.primarias, 0);
 
     const first = recs[0];
 
@@ -172,10 +183,10 @@ export function aggregateAgents(records: DailyAgentRecord[]): AgentKPI[] {
     const prodScore = productividadScore(avgProd);
     const absScore = absentismoScore(avgAbs);
     const vScore = ventasScore(totalVentas);
-    const primariasScore = 0; // placeholder
+    const pScore = primariasScoreFn(totalPrimarias);
 
     const kpiH = (adhScore * 0.10 + prodScore * 0.20 + absScore * 0.10);
-    const kpiC = (primariasScore * 0.20 + vScore * 0.40);
+    const kpiC = (pScore * 0.20 + vScore * 0.40);
     const kpiTotal = kpiH * 0.40 + kpiC * 0.60;
 
     return {
@@ -189,6 +200,7 @@ export function aggregateAgents(records: DailyAgentRecord[]): AgentKPI[] {
       productividad: avgProd,
       absentismo: avgAbs,
       ventasTotales: totalVentas,
+      primariasTotal: totalPrimarias,
       diasTrabajados: workDays.length,
       kpiHigienicos: kpiH,
       kpiComerciales: kpiC,
@@ -199,7 +211,7 @@ export function aggregateAgents(records: DailyAgentRecord[]): AgentKPI[] {
 
 export function calculateKPIsFromAgents(agents: AgentKPI[]): OverallKPIs {
   if (agents.length === 0) {
-    return { adhBrutaGeneral: 0, adhNetaGeneral: 0, productividadGeneral: 0, absentismoGeneral: 0, ventasTotales: 0 };
+    return { adhBrutaGeneral: 0, adhNetaGeneral: 0, productividadGeneral: 0, absentismoGeneral: 0, ventasTotales: 0, primariasTotal: 0 };
   }
   const active = agents.filter(a => a.adherenciaBruta > 0 || a.productividad > 0);
   const count = active.length || 1;
@@ -213,6 +225,7 @@ export function calculateKPIsFromAgents(agents: AgentKPI[]): OverallKPIs {
     productividadGeneral: avg(a => a.productividad),
     absentismoGeneral: avg(a => a.absentismo),
     ventasTotales: total(a => a.ventasTotales),
+    primariasTotal: total(a => a.primariasTotal),
   };
 }
 
