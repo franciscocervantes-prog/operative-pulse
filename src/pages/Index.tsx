@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import GaugeChart from '@/components/GaugeChart';
 import SalesChart from '@/components/SalesChart';
@@ -6,30 +6,16 @@ import AgentRanking from '@/components/AgentRanking';
 import AlertPanel from '@/components/AlertPanel';
 import KPIBreakdown from '@/components/KPIBreakdown';
 import FilterBar, { Filters, applyFilters, emptyFilters } from '@/components/FilterBar';
-import { fetchOverallKPIs, fetchDailyRecords, aggregateAgents, calculateKPIsFromAgents, getStatusColor, isDateInRange, OverallKPIs, DailyAgentRecord, AgentKPI } from '@/lib/csvParser';
+import LoadingOverlay from '@/components/LoadingOverlay';
+import { useDataLoader } from '@/hooks/useDataLoader';
+import { aggregateAgents, calculateKPIsFromAgents, getStatusColor, isDateInRange } from '@/lib/csvParser';
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
 
 const Index = () => {
-  const [overallRaw, setOverallRaw] = useState<OverallKPIs | null>(null);
-  const [dailyRecords, setDailyRecords] = useState<DailyAgentRecord[]>([]);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const { dailyRecords, overallRaw, progress, lastUpdate, loadData } = useDataLoader();
   const [darkMode, setDarkMode] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-
-  const loadData = useCallback(async () => {
-    try {
-      const [overallData, records] = await Promise.all([
-        fetchOverallKPIs(),
-        fetchDailyRecords(),
-      ]);
-      setOverallRaw(overallData);
-      setDailyRecords(records);
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error loading data:', error);
-    }
-  }, []);
 
   useEffect(() => {
     loadData();
@@ -76,15 +62,13 @@ const Index = () => {
     return overallRaw;
   }, [overallRaw, hasActiveFilter, filteredAgents, filters.dateFrom, filters.dateTo]);
 
+  // Show loading overlay while data is being processed
+  if (progress.stage !== 'done' && progress.stage !== 'idle') {
+    return <LoadingOverlay progress={progress} />;
+  }
+
   if (!overall) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Cargando dashboard...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay progress={{ stage: 'fetching', percent: 0 }} />;
   }
 
   const absentismoValue = overall.absentismoGeneral > 1 ? overall.absentismoGeneral : overall.absentismoGeneral * 100;
@@ -175,6 +159,7 @@ const Index = () => {
         <span>
           Actualización automática cada 5 min
           {hasActiveFilter && <span className="ml-2 text-accent font-semibold">• Filtro activo ({filteredAgents.length} agentes)</span>}
+          {dailyRecords.length > 50000 && <span className="ml-2">• {dailyRecords.length.toLocaleString('es-MX')} registros (Web Worker)</span>}
         </span>
         <span>Última actualización: {lastUpdate.toLocaleTimeString('es-MX')}</span>
       </div>
