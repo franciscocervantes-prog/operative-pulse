@@ -39,6 +39,7 @@ function parseDailyRecords(headers, dataLines) {
       productividad: num('productividad'),
       absentismo: num('absentismo'),
       ventasHoy: num('ventas'),
+      primarias: num('primarias'),
       novedad: str('novedad'),
       novedadAjustada: cols[cols.length - 1]?.trim() || '',
     };
@@ -61,6 +62,9 @@ function absentismoScore(avg) {
 function ventasScore(total) {
   return Math.min((total / 10) * 100, 100);
 }
+function primariasScoreFn(total) {
+  return Math.min((total / 5) * 100, 100);
+}
 
 function aggregateAgents(records) {
   const byAgent = new Map();
@@ -76,7 +80,7 @@ function aggregateAgents(records) {
     const workDays = recs.filter(r => r.adhBruta > 0 || r.productividad > 0);
     const count = workDays.length || 1;
 
-    let sumAdhBruta = 0, sumAdhNeta = 0, sumProd = 0, sumAbs = 0, totalVentas = 0;
+    let sumAdhBruta = 0, sumAdhNeta = 0, sumProd = 0, sumAbs = 0, totalVentas = 0, totalPrimarias = 0;
     for (const r of workDays) {
       sumAdhBruta += r.adhBruta;
       sumAdhNeta += r.adhNeta;
@@ -85,6 +89,7 @@ function aggregateAgents(records) {
     for (const r of recs) {
       sumAbs += r.absentismo;
       totalVentas += r.ventasHoy;
+      totalPrimarias += r.primarias;
     }
 
     const avgAdhBruta = sumAdhBruta / count;
@@ -96,9 +101,10 @@ function aggregateAgents(records) {
     const prodScore = productividadScore(avgProd);
     const absScore = absentismoScore(avgAbs);
     const vScore = ventasScore(totalVentas);
+    const pScore = primariasScoreFn(totalPrimarias);
 
     const kpiH = (adhScore * 0.10 + prodScore * 0.20 + absScore * 0.10);
-    const kpiC = (0 * 0.20 + vScore * 0.40);
+    const kpiC = (pScore * 0.20 + vScore * 0.40);
     const kpiTotal = kpiH * 0.40 + kpiC * 0.60;
 
     result.push({
@@ -112,6 +118,7 @@ function aggregateAgents(records) {
       productividad: avgProd,
       absentismo: avgAbs,
       ventasTotales: totalVentas,
+      primariasTotal: totalPrimarias,
       diasTrabajados: workDays.length,
       kpiHigienicos: kpiH,
       kpiComerciales: kpiC,
@@ -123,7 +130,7 @@ function aggregateAgents(records) {
 
 function calculateOverallFromAgents(agents) {
   if (agents.length === 0) {
-    return { adhBrutaGeneral: 0, adhNetaGeneral: 0, productividadGeneral: 0, absentismoGeneral: 0, ventasTotales: 0 };
+    return { adhBrutaGeneral: 0, adhNetaGeneral: 0, productividadGeneral: 0, absentismoGeneral: 0, ventasTotales: 0, primariasTotal: 0 };
   }
   const active = agents.filter(a => a.adherenciaBruta > 0 || a.productividad > 0);
   const count = active.length || 1;
@@ -136,6 +143,7 @@ function calculateOverallFromAgents(agents) {
     productividadGeneral: avg(a => a.productividad),
     absentismoGeneral: avg(a => a.absentismo),
     ventasTotales: total(a => a.ventasTotales),
+    primariasTotal: total(a => a.primariasTotal),
   };
 }
 

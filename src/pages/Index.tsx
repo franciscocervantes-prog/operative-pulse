@@ -90,7 +90,7 @@ const Index = () => {
       <KPIBreakdown agents={filteredAgents} />
 
       {/* KPIs Gauges */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-6 gap-4">
         <GaugeChart
           label="Adherencia Bruta"
           value={overall.adhBrutaGeneral}
@@ -139,6 +139,15 @@ const Index = () => {
           unit="Número de ventas"
           meta={10}
           metaLabel="≥ 10 ventas"
+        />
+        <GaugeChart
+          label="Primarias"
+          value={overall.primariasTotal}
+          color={overall.primariasTotal >= 5 ? 'green' : overall.primariasTotal >= 2 ? 'yellow' : 'red'}
+          suffix=""
+          unit="Número de primarias"
+          meta={5}
+          metaLabel="≥ 5 primarias"
         />
       </div>
 
